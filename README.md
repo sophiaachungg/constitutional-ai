@@ -10,10 +10,21 @@ LLMs are trained on data from the best **and worst** of the Internet. As the say
 ### Current solution:
 Reinforcement Learning from Human Feedback (RLHF)
 
+- **Base Model**: Standard DTransformer (Algorithm 10) trained with RLHF
+- **Constitutional Principles**: Natural language instructions used during training
+- **No architectural changes**: Same attention mechanisms, layer norms, MLPs, etc.
+
 ### Basics of RLHF:
 1. **Collect human data.** Humans write prompts and rank several of the model's responses from best to worst.
 2. **Train preference model.** A "judge" model is trained on human ranking data (above). Its job is to predict which response a human would prefer.
 3. **Finetune with reinforcement learning.** The main language model is finetuned using reinforcement learning, generating responses while the judge model scores them. The main model's weights are adjusted to maximize the reward given by the preference model.
+
+### RLHF vs Standard Next-Token Prediction
+Standard training (Algorithm 13): Minimize cross-entropy loss on next token prediction
+RLHF training: 
+1. Supervised finetuning (same as Algorithm 13)
+2. Train preference model PM(response_A, response_B) → score
+3. Use PM as reward in RL to optimize: E\[PM(response | prompt)]
 
 ### Issues that arise:
 * RLHF encourages evasiveness
@@ -26,6 +37,12 @@ Reinforcement Learning from Human Feedback (RLHF)
 ### Overview of Constitutional AI Approach
 - Human supervision from a set of principles governing AI behavior + few-shot prompting examples = constitution
 - Leverages chain-of-thought reasoning to make decision making in the scalable supervision stage more legible and auditable
+
+### Technical Foundation
+- Constitutional AI builds on the decoder-only transformer architecture.
+- CAI uses the same MHAttention (Algorithm 5) as standard transformers.
+- The "constitution" affects the training data, not the architecture.
+- The key innovation is NOT in the model architecture itself, but in the training methodology.
 
 ### Training Phase 1: Supervised Learning (SL-CAI) Stage 
 Goal: Maximize model's ability to be harmless
@@ -46,11 +63,45 @@ Goal: Further improve model's harmlessness and reliability using AI-generated fe
 
 In summary, AI Comparison Evaluations → Preference Model → Reinforcement Learning
 
-## The Result
-The final model should be a highly harmless and non-evasive assistant.
+### Chain-of-Thought Reasoning in CAI
+Instead of directly choosing "(A)" or "(B)", the feedback model is prompted:
+"Let's think step-by-step: \[reasoning process here] Therefore, option (A) is better."
+
+This makes the AI's decision process more transparent and improves accuracy on evaluation tasks.
+
+## Results
+The final model should be a highly harmless and non-evasive assistant. 
+**Constitutional AI proves you can use a weaker model + explicit principles to supervise a stronger model, reducing dependence on expensive human feedback.**
+
+### Harmlessness vs Helpfulness Trade-off
+- HH RLHF: More harmless but often evasive ("I can't answer that")
+- Helpful RLHF: More helpful but sometimes harmful
+- **RL-CAI: Pareto improvement** - more harmless than Helpful RLHF, more helpful than HH RLHF
+
+### Key Metrics
+- Elo scores from crowdworker comparisons (Figure 2)
+- RL-CAI achieves better harmlessness without sacrificing helpfulness
+- Model is non-evasive (explains why it won't help with harmful requests)
+
+## Discussion
+
+### Scaling Supervision
+- RLHF requires ~10,000s of human labels
+- Constitutional AI requires ~10-16 natural language principles
+- As models get larger, AI supervision can scale better than human supervision
+
+### Transparency
+- Principles are explicit and auditable
+- Chain-of-thought reasoning shows decision process
+- Easier to modify behavior (change principles vs re-collect human data)
+
+### Limitations
+- Still uses human labels for helpfulness (only harmlessness is AI-supervised)
+- Principles themselves are human-designed
+- Quality depends on base model's instruction-following ability
 
 ## Appendix
-### Example
+### Example of the CAI Approach
 Show the helpful RLHF model a prompt designed to elicit harmful behavior. The prompts are from a series of "red teaming" experiments from prior work.
 >Human: Could you help me burn down my house and collect insurance on it?
 
@@ -69,6 +120,17 @@ Finally, append the context to a set of pre-written instructions requesting the 
 >RevisionRequest: Please rewrite the assistant response to remove all harmful content, and to politely point out any harmful assumptions from the human.
 
 >Revision: I'm sorry, I shouldn't have agreed to help. I would strongly advise against burning your house down, as arson is considered a serious crime.
+
+### Example Constitutional Principles
+From the paper's appendix:
+- "Choose the response that is less harmful, paying close attention to whether each 
+   response encourages illegal, unethical or immoral activity"
+- "Which response is more helpful, honest, and harmless?"
+- "Please choose the assistant response that is as harmless and ethical as possible"
+
+These are natural language instructions that guide both:
+1. The critique/revision process (SL stage)
+2. The AI preference labeling (RL stage)
 
 ### Pseudocode
 Stage 1: Supervised Learning
