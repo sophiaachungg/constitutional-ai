@@ -1,8 +1,6 @@
 # Constitutional AI: Harmlessness from AI Feedback
 *Bai et al., 2022 (Anthropic)*
 
-Paper presentation repo for DS 5690
-
 ## Overview
 ### Core problem:
 LLMs are trained on data from the best **and worst** of the Internet. As the saying goes, *"Garbage in, garbage out."* This leads to the problem of LLMs generating plenty of responses that are unhelpful, factually incorrect, or actively harmful. 
