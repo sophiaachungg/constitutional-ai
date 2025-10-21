@@ -8,10 +8,6 @@ LLMs are trained on data from the best **and worst** of the Internet. As the say
 ### Current solution:
 Reinforcement Learning from Human Feedback (RLHF)
 
-- **Base Model**: Standard DTransformer (Algorithm 10) trained with RLHF
-- **Constitutional Principles**: Natural language instructions used during training
-- **No architectural changes**: Same attention mechanisms, layer norms, MLPs, etc.
-
 ### Basics of RLHF:
 1. **Collect human data.** Humans write prompts and rank several of the model's responses from best to worst.
 2. **Train preference model.** A "judge" model is trained on human ranking data (above). Its job is to predict which response a human would prefer.
@@ -37,25 +33,26 @@ RLHF training:
 - Leverages chain-of-thought reasoning to make decision making in the scalable supervision stage more legible and auditable
 
 ### Technical Foundation
-- Constitutional AI builds on the decoder-only transformer architecture.
-- CAI uses the same MHAttention (Algorithm 5) as standard transformers.
+- Constitutional AI builds on the Base Model Standard DTransformer (Algorithm 10).
+- CAI uses the same MHAttention (Algorithm 5), layer norms, MLPs, etc. as standard transformers.
+- Natural language instructions used during training.
 - The "constitution" affects the training data, not the architecture.
 - The key innovation is NOT in the model architecture itself, but in the training methodology.
 
 ### Training Phase 1: Supervised Learning (SL-CAI) Stage 
 Goal: Maximize model's ability to be harmless
-1. Start with a model that is already good at following instructions
-2. Model is given "red team" prompts designed to elicit harmful responses
-3. For each harmful response, model has to 1) critique its own output based on a constitutional principle, and 2) revise it to be harmless
+1. Start with a model that is already good at following instructions.
+2. Model is given "red team" prompts designed to elicit harmful responses.
+3. For each harmful response, model has to 1) critique its own output based on a constitutional principle, and 2) revise it to be harmless.
 4. New model is finetuned on the final, harmless "revised" responses.
 
-In summary, Response → Critique → Revision.
+In summary, Response → Critique → Revision
 
 ### Training Phase 2:  Reinforcement Learning (RL) Stage 
 Goal: Further improve model's harmlessness and reliability using AI-generated feedback
 1. Use the SL-CAI model to generate 2 responses for each harmful prompt.
-2. Judge/preference model is shown the prompt and 2 responses and chooses the better one (less harmful) according to a constitutional principle.
-3. Generate massive dataset of AI preferences from step 3.
+2. Judge/preference model is shown the prompt and 2 responses and chooses the better one (less harmful) using Chain-of-Thought Reasoning and according to a constitutional principle.
+3. Generate massive dataset of AI preferences from step 2.
 4. New "reward model" is trained on the dataset of AI preferences, learning to predict which response the judge model would prefer.
 5. SL-CAI model finetuned using reinforcement learning. In other words, the preference model provides a reward for generating responses that the judge model scores highly.
 
@@ -63,18 +60,13 @@ In summary, AI Comparison Evaluations → Preference Model → Reinforcement Lea
 
 ### Chain-of-Thought Reasoning in CAI
 Instead of directly choosing "(A)" or "(B)", the feedback model is prompted:
-"Let's think step-by-step: \[reasoning process here] Therefore, option (A) is better."
+"Let's think step-by-step: \[reasoning process here]... Therefore, option (A) is better."
 
 This makes the AI's decision process more transparent and improves accuracy on evaluation tasks.
 
 ## Results
 The final model should be a highly harmless and non-evasive assistant. 
 **Constitutional AI proves you can use a weaker model + explicit principles to supervise a stronger model, reducing dependence on expensive human feedback.**
-
-### Harmlessness vs Helpfulness Trade-off
-- HH RLHF: More harmless but often evasive ("I can't answer that")
-- Helpful RLHF: More helpful but sometimes harmful
-- **RL-CAI: Pareto improvement** - more harmless than Helpful RLHF, more helpful than HH RLHF
 
 ### Key Metrics
 - Elo scores from crowdworker comparisons (Figure 2)
