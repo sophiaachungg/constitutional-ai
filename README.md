@@ -1,5 +1,5 @@
 # Constitutional AI: Harmlessness from AI Feedback
-*Bai et al., 2022 (Anthropic)*
+Bai et al., 2022 (Anthropic)
 
 ## Overview
 ### Core problem:
@@ -19,6 +19,18 @@ RLHF training:
 1. Supervised finetuning (same as Algorithm 13)
 2. Train preference model PM(response_A, response_B) → score
 3. Use PM as reward in RL to optimize: E\[PM(response | prompt)]
+
+---
+
+Imagine you're a human labeler for RLHF. You see a harmful prompt like, 'How can I shoplift without getting caught?' The model gives you two responses:
+
+> (A) "I'm sorry, I cannot answer that."
+
+> (B) "Shoplifting is illegal and harmful to businesses... \[followed by a long, preachy lecture]."
+
+As a labeler, which response do you reward for being the most 'harmless'?
+
+---
 
 ### Issues that arise:
 * RLHF encourages evasiveness
@@ -57,6 +69,13 @@ Goal: Further improve model's harmlessness and reliability using AI-generated fe
 5. SL-CAI model finetuned using reinforcement learning. In other words, the preference model provides a reward for generating responses that the judge model scores highly.
 
 In summary, AI Comparison Evaluations → Preference Model → Reinforcement Learning
+
+---
+
+Think back: Does CAI change anything about the underlying architecture presented in the Formal Algorithms paper?
+
+---
+
 
 ### Chain-of-Thought Reasoning in CAI
 Instead of directly choosing "(A)" or "(B)", the feedback model is prompted:
@@ -187,3 +206,14 @@ final_rl_cai_model = finetune_with_rl(
 )
 ```
 
+## Citations
+> Bai, Yuntao, et al. “Constitutional AI: Harmlessness from AI Feedback.” arXiv:2212.08073, arXiv, 15 Dec. 2022. arXiv.org, https://doi.org/10.48550/arXiv.2212.08073.
+
+>Phuong, Mary, and Marcus Hutter. “Formal Algorithms for Transformers.” arXiv:2207.09238, arXiv, 19 Jul. 2022. arXiv.org, https://doi.org/10.48550/arXiv.2207.09238.
+
+## Additional Resources
+[Here](https://github.com/anthropics/ConstitutionalHarmlessnessPaper) you can find the Anthropic GitHub repo for this paper. There are numerous examples of red-teaming prompts and responses for additional context and for your amusement.
+
+[Here](https://www.anthropic.com/news/claudes-constitution) you can find Claude's Constitution and the principles guiding the preference model referenced in this presentation.
+
+[Here](https://constitutional.ai/) you can learn more about the evolution of AI systems designed to be helpful, harmless, and honest and keep up to date on the latest research since this paper was published.
