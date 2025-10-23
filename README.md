@@ -142,69 +142,245 @@ These are natural language instructions that guide both:
 2. The AI preference labeling (RL stage)
 
 ### Pseudocode
-Stage 1: Supervised Learning
+#### Stage 1: Supervised Learning (SL-CAI)
+
+**Algorithm 1: Critique-Revision Generation**
 ```
-initial_model = load_model("helpful-only-rlhf-model")
-constitution = load_principles("harmlessness_principles.txt")
-red_team_prompts = load_prompts("harmful_prompts.txt")
+Input: x ∈ L*, a red-team prompt designed to elicit harmful behavior
+Input: θ_helpful, parameters of a helpful-only RLHF model
+Input: C = {c₁, c₂, ..., c_K}, a set of constitutional principles
+Output: y_revised ∈ L*, a harmless revised response
+Hyperparameters: N_revisions ∈ ℕ, number of critique-revision iterations
 
-# Create a dataset of harmless revisions
-harmless_finetuning_data = []
-for prompt in red_team_prompts:
-    # 1. Generate an initial (likely harmful) response
-    initial_response = initial_model.generate(prompt)
-
-    # 2. Use the constitution to critique the response
-    principle = constitution.sample()
-    critique_prompt = f"{prompt}\nResponse: {initial_response}\n\nCritique this response based on: {principle}"
-    critique = initial_model.generate(critique_prompt)
-
-    # 3. Use the critique to revise the response
-    revision_prompt = f"{critique_prompt}\nCritique: {critique}\n\nNow, revise the initial response."
-    revised_response = initial_model.generate(revision_prompt)
-
-    # 4. Save the prompt and the final harmless revision for training
-    harmless_finetuning_data.append({"prompt": prompt, "completion": revised_response})
-
-# 5. Finetune a new model on the self-corrected data
-sl_cai_model = finetune(base_model="pretrained_lm", data=harmless_finetuning_data)
+1  y₀ ← DTransformer(x | θ_helpful)  // Generate initial (likely harmful) response
+2  for n = 1, 2, ..., N_revisions do
+3      c ← sample_uniform(C)  // Sample a constitutional principle
+4      
+5      // Generate critique
+6      x_critique ← [x; y_{n-1}; "Critique based on: "; c]
+7      critique_n ← DTransformer(x_critique | θ_helpful)
+8      
+9      // Generate revision
+10     x_revision ← [x; y_{n-1}; critique_n; "Revise the response"]
+11     y_n ← DTransformer(x_revision | θ_helpful)
+12 end
+13 return y_revised = y_{N_revisions}
 ```
 
-Stage 2: 
+**Algorithm 2: SL-CAI Training**
 ```
-# Part A: Generate AI Preference Data
-sl_cai_model = load_model_from_stage_1()
-feedback_model = load_model("pretrained_lm") # The AI Judge
-ai_preference_dataset = []
+Input: {x_i^harm}ᵢ₌₁^M_harm, red-team prompts
+Input: {x_j^help}ⱼ₌₁^M_help, helpful prompts  
+Input: θ₀, initial pretrained model parameters
+Input: C, constitutional principles
+Output: θ̂_SL, trained SL-CAI model parameters
+Hyperparameters: M_epochs ∈ ℕ, η ∈ (0,∞) learning rate
 
-for prompt in red_team_prompts:
-    # 1. Generate two different responses
-    response_A = sl_cai_model.generate(prompt)
-    response_B = sl_cai_model.generate(prompt)
-
-    # 2. Ask the AI judge to choose the better one based on the constitution
-    principle = constitution.sample()
-    choice_prompt = f"Prompt: {prompt}\n\nWhich response is less harmful according to '{principle}'?\n\n(A) {response_A}\n(B) {response_B}"
-    
-    # The feedback model outputs its preference, e.g., "(A)"
-    ai_choice = feedback_model.generate(choice_prompt)
-    
-    # 3. Store the AI's preference
-    if ai_choice == "(A)":
-        ai_preference_dataset.append({"chosen": response_A, "rejected": response_B})
-    else:
-        ai_preference_dataset.append({"chosen": response_B, "rejected": response_A})
-
-# Part B: Train PM and use for RL
-# 4. Train a Preference Model (PM) on the AI-generated labels
-preference_model = train_preference_model(ai_preference_dataset)
-
-# 5. Use the PM as a reward signal to finetune the SL model with RL
-final_rl_cai_model = finetune_with_rl(
-    policy_model=sl_cai_model,
-    reward_function=preference_model
-)
+1  D_harmless ← ∅
+2  for i = 1, 2, ..., M_harm do
+3      y_i ← CritiqueRevisionGeneration(x_i^harm, θ_helpful, C)
+4      D_harmless ← D_harmless ∪ {(x_i^harm, y_i)}
+5  end
+6  
+7  // Add helpful responses to maintain helpfulness
+8  D_helpful ← ∅
+9  for j = 1, 2, ..., M_help do
+10     y_j ← DTransformer(x_j^help | θ_helpful)
+11     D_helpful ← D_helpful ∪ {(x_j^help, y_j)}
+12 end
+13 
+14 D_train ← D_harmless ∪ D_helpful
+15 
+16 // Standard supervised finetuning (similar to Algorithm 13)
+17 for epoch = 1, 2, ..., M_epochs do
+18     for (x, y) ∈ D_train do
+19         T ← length(y)
+20         ω(θ) ← DTransformer(x; y[1:T-1] | θ)
+21         loss(θ) = -∑ᵀ⁻¹ₜ₌₁ log ω(θ)[y[t+1], t]
+22         θ ← θ - η · ∇loss(θ)
+23     end
+24 end
+25 return θ̂_SL = θ
 ```
+
+---
+
+#### Stage 2: Reinforcement Learning from AI Feedback (RL-CAI)
+
+**Algorithm 3: AI Feedback Generation**
+```
+Input: x ∈ L*, a prompt
+Input: θ_SL, SL-CAI model parameters
+Input: θ_feedback, feedback model parameters (typically pretrained LM)
+Input: c ∈ C, a constitutional principle
+Output: (y_chosen, y_rejected), a preference pair
+Hyperparameters: T_sample ∈ (0,∞), sampling temperature
+
+1  // Generate two candidate responses
+2  y_A ← DTransformer(x | θ_SL, temp=T_sample)
+3  y_B ← DTransformer(x | θ_SL, temp=T_sample)
+4  
+5  // Construct multiple choice comparison prompt
+6  x_compare ← [
+7      "Prompt: "; x; "\n"
+8      "Which response is better according to '"; c; "'?\n"
+9      "(A) "; y_A; "\n"
+10     "(B) "; y_B; "\n"
+11     "The answer is: "
+12 ]
+13 
+14 // Get feedback model's choice via log probabilities
+15 ω ← DTransformer(x_compare | θ_feedback)
+16 p_A ← exp(log_prob(ω, "(A)"))
+17 p_B ← exp(log_prob(ω, "(B)"))
+18 
+19 // Normalize and choose
+20 if p_A / (p_A + p_B) > 0.5 then
+21     return (y_chosen = y_A, y_rejected = y_B)
+22 else
+23     return (y_chosen = y_B, y_rejected = y_A)
+24 end
+```
+
+**Algorithm 4: AI Feedback with Chain-of-Thought**
+```
+Input: x ∈ L*, a prompt
+Input: θ_SL, SL-CAI model parameters  
+Input: θ_helpful, helpful RLHF model for CoT reasoning
+Input: c ∈ C, a constitutional principle
+Output: (y_chosen, y_rejected), a preference pair
+
+1  y_A ← DTransformer(x | θ_SL)
+2  y_B ← DTransformer(x | θ_SL)
+3  
+4  // Construct CoT prompt (conversational format for RLHF model)
+5  x_CoT ← [
+6      "Human: Consider the following prompt and responses:\n"
+7      "Prompt: "; x; "\n"
+8      "Evaluate according to: "; c; "\n"
+9      "(A) "; y_A; "\n"
+10     "(B) "; y_B; "\n"
+11     "Assistant: Let's think step-by-step: "
+12 ]
+13 
+14 // Generate chain-of-thought reasoning
+15 reasoning ← DTransformer(x_CoT | θ_helpful)
+16 
+17 // Extract choice from reasoning (typically ends with "option (A)" or "(B)")
+18 if "(A)" appears last in reasoning then
+19     return (y_chosen = y_A, y_rejected = y_B)
+20 else
+21     return (y_chosen = y_B, y_rejected = y_A)
+22 end
+```
+
+**Algorithm 5: Preference Model Training**
+```
+Input: {x_i^harm}ᵢ₌₁^M_harm, red-team prompts
+Input: {(x_j^help, y_j^chosen, y_j^rejected)}ⱼ₌₁^M_help, human helpfulness preferences
+Input: θ_SL, SL-CAI model parameters
+Input: θ_feedback, feedback model parameters
+Input: C, constitutional principles
+Output: θ̂_PM, trained preference model parameters
+Hyperparameters: M_epochs ∈ ℕ, η ∈ (0,∞)
+
+1  // Generate AI preference labels for harmlessness
+2  D_AI ← ∅
+3  for i = 1, 2, ..., M_harm do
+4      c ← sample_uniform(C)
+5      (y_chosen, y_rejected) ← AIFeedback(x_i^harm, θ_SL, θ_feedback, c)
+6      D_AI ← D_AI ∪ {(x_i^harm, y_chosen, y_rejected)}
+7  end
+8  
+9  // Combine with human helpfulness labels
+10 D_human ← {(x_j^help, y_j^chosen, y_j^rejected)}ⱼ₌₁^M_help
+11 D_PM ← D_AI ∪ D_human
+12 
+13 // Train preference model via ranking loss
+14 θ_PM ← θ_SL  // Initialize from SL-CAI model
+15 for epoch = 1, 2, ..., M_epochs do
+16     for (x, y_chosen, y_rejected) ∈ D_PM do
+17         r_chosen ← PreferenceScore(x, y_chosen | θ_PM)
+18         r_rejected ← PreferenceScore(x, y_rejected | θ_PM)
+19         
+20         // Ranking loss (chosen should score higher than rejected)
+21         loss(θ_PM) = -log(σ(r_chosen - r_rejected))
+22         θ_PM ← θ_PM - η · ∇loss(θ_PM)
+23     end
+24 end
+25 return θ̂_PM
+```
+
+**Algorithm 6: Preference Scoring**
+```
+Input: x ∈ L*, a prompt
+Input: y ∈ L*, a response
+Input: θ_PM, preference model parameters
+Output: r ∈ ℝ, scalar reward/preference score
+
+1  // Encode prompt and response
+2  T ← length(y)
+3  h ← DTransformer(x; y | θ_PM)  // Get final hidden state
+4  
+5  // Project to scalar via learned linear layer
+6  r ← W_r^⊤ h[:, T] + b_r  // W_r ∈ ℝ^d_e, b_r ∈ ℝ
+7  return r
+```
+
+**Algorithm 7: RL-CAI Training**
+```
+Input: {x_i}ᵢ₌₁^M_prompts, training prompts (harmfulness + helpfulness)
+Input: θ_SL, SL-CAI model parameters (initial policy)
+Input: θ̂_PM, trained preference model parameters
+Output: θ̂_RL, final RL-CAI model parameters
+Hyperparameters: M_epochs ∈ ℕ, η ∈ (0,∞), β ∈ (0,∞) (KL penalty coefficient)
+
+1  θ_policy ← θ_SL  // Initialize policy from SL-CAI
+2  
+3  // Standard PPO/REINFORCE loop
+4  for epoch = 1, 2, ..., M_epochs do
+5      for i = 1, 2, ..., M_prompts do
+6          // Sample response from current policy
+7          y ← DTransformer(x_i | θ_policy)
+8          
+9          // Get reward from preference model
+10         r_PM ← PreferenceScore(x_i, y | θ̂_PM)
+11         
+12         // KL penalty to prevent drift from SL-CAI model
+13         p_policy ← DTransformer(x_i; y | θ_policy)
+14         p_SL ← DTransformer(x_i; y | θ_SL)
+15         KL_penalty ← ∑ₜ p_policy[t] · log(p_policy[t] / p_SL[t])
+16         
+17         // Total reward
+18         r_total ← r_PM - β · KL_penalty
+19         
+20         // Policy gradient update (simplified; in practice use PPO)
+21         loss(θ_policy) = -r_total · log p_policy(y | x_i)
+22         θ_policy ← θ_policy - η · ∇loss(θ_policy)
+23     end
+24 end
+25 return θ̂_RL = θ_policy
+```
+
+---
+
+#### Helper Functions
+
+**Notation:**
+- `L ≡ [M_V]`: Vocabulary of size M_V
+- `L*`: Set of all sequences over vocabulary L
+- `x, y ∈ L*`: Prompt and response sequences
+- `θ`: Neural network parameters
+- `C = {c₁, ..., c_K}`: Set of constitutional principles (natural language strings)
+- `DTransformer(· | θ)`: Decoder-only transformer (Algorithm 10 from Formal Algorithms)
+- `[s₁; s₂; ...]`: String concatenation
+- `σ(z) = 1/(1 + e^(-z))`: Sigmoid function
+- `∇`: Gradient operator (computed via automatic differentiation)
+
+**Key Differences from Standard Training:**
+- Standard next-token prediction (Algorithm 13): Minimizes cross-entropy on training data
+- RLHF: Adds preference model + RL stage using human preferences
+- Constitutional AI (CAI): Replaces human harmlessness labels with AI-generated labels based on explicit principles
 
 ## Citations
 > Bai, Yuntao, et al. “Constitutional AI: Harmlessness from AI Feedback.” arXiv:2212.08073, arXiv, 15 Dec. 2022. arXiv.org, https://doi.org/10.48550/arXiv.2212.08073.
