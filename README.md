@@ -2,10 +2,10 @@
 Bai et al., 2022 (Anthropic)
 
 ## Overview
-### Core problem:
+### Core Problem:
 LLMs are trained on data from the best **and worst** of the Internet. As the saying goes, *"Garbage in, garbage out."* This leads to the problem of LLMs generating plenty of responses that are unhelpful, factually incorrect, or actively harmful. 
 
-### Current solution:
+### Current Solution:
 Reinforcement Learning from Human Feedback (RLHF)
 
 ### Basics of RLHF:
@@ -41,20 +41,20 @@ As a labeler, which response do you reward for being the most 'helpful'? What ab
 
 ---
 
-### Issues that arise:
+### Issues that Arise:
 * RLHF encourages evasiveness
 * Alignment problem - How do you steer a model to be helpful, honest, and harmless?
 * Helpful-Harmless spectrum - How do you strike a balance between helpfulness vs harmlessness?
 * Scalability - Human labelers are slow and expensive. As LLMs continue to grow in scale, how can the ethics of the AI scale in tandem?
 * Transparency - How do you know what values are taught to the model if they're hidden within the human judgments?
 
-## Proposed solution
+## Proposed Solution
 ### Overview of Constitutional AI Approach
 - Human supervision from a set of principles governing AI behavior + few-shot prompting examples = constitution
 - Leverages chain-of-thought reasoning to make decision making in the scalable supervision stage more legible and auditable
 
 ### Technical Foundation
-- Constitutional AI builds on the Base Model Standard DTransformer (Algorithm 10).
+- Constitutional AI builds on the Base Model Standard DTransformer (Algorithm 10), modified to output a single number (preference score) instead of a sequence of words.
 - CAI uses the same MHAttention (Algorithm 5), layer norms, MLPs, etc. as standard transformers.
 - Natural language instructions used during training.
 - The "constitution" affects the training data, not the architecture.
@@ -63,7 +63,6 @@ As a labeler, which response do you reward for being the most 'helpful'? What ab
   <img src="https://github.com/sophiaachungg/constitutional-ai/blob/main/cai%20core.png" alt="">
   <figcaption>Overview of CAI, courtesy of Bai et al. 2022 </figcaption>
 </figure>
-
 
 ### Training Phase 1: Supervised Learning (SL-CAI) Stage 
 Goal: Maximize model's ability to be harmless
@@ -92,7 +91,7 @@ Think back: Does CAI change anything about the underlying architecture presented
 
 <details>
    <summary>Answer</summary>
-   No, the key innovation is NOT in the model architecture itself, but in the training methodology.
+   No, the key innovation is NOT in the base model architecture itself, but in the training methodology. However, the DTransformer *is* modified to output a single number as a preference score to compare model responses instead of a sequence of words.
 </details>
 
 ---
