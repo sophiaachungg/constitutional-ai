@@ -1,5 +1,5 @@
-# Constitutional AI: Harmlessness from AI Feedback
-Bai et al., 2022 (Anthropic)
+# Constitutional AI: Harmlessness from AI Feedback (Anthropic)
+> Bai, Yuntao, et al. “Constitutional AI: Harmlessness from AI Feedback.” arXiv:2212.08073, arXiv, 15 Dec. 2022. arXiv.org, https://doi.org/10.48550/arXiv.2212.08073.
 
 ## Overview
 ### Core Problem:
@@ -15,8 +15,10 @@ Reinforcement Learning from Human Feedback (RLHF)
 
 <figure>
   <img src="https://github.com/sophiaachungg/constitutional-ai/blob/main/rlhf-overview-cameronrwolfe-substack.png" alt="">
-  <figcaption>Overview of RLHF, courtesy of Cameron R. Wolfe via Deep (Learning) Focus on Substack. </figcaption>
+  <figcaption>Overview of RLHF from </figcaption>
 </figure>
+
+[The Story of RLHF by Cameron R. Wolfe](https://cameronrwolfe.substack.com/p/the-story-of-rlhf-origins-motivations)
 
 ### RLHF vs Standard Next-Token Prediction
 Standard training (Algorithm 13): Minimize cross-entropy loss on next token prediction
@@ -187,11 +189,6 @@ These are natural language instructions that guide both:
 | **Architecture** | DTransformer (unchanged) | DTransformer (unchanged) | DTransformer (unchanged) |
 | **Key Innovation** | N/A (baseline) | Critique-revision loop | AI-generated preferences |
 
-## Citations
-> Bai, Yuntao, et al. “Constitutional AI: Harmlessness from AI Feedback.” arXiv:2212.08073, arXiv, 15 Dec. 2022. arXiv.org, https://doi.org/10.48550/arXiv.2212.08073.
-
->Phuong, Mary, and Marcus Hutter. “Formal Algorithms for Transformers.” arXiv:2207.09238, arXiv, 19 Jul. 2022. arXiv.org, https://doi.org/10.48550/arXiv.2207.09238.
-
 ## Additional Resources
 [Here](https://github.com/anthropics/ConstitutionalHarmlessnessPaper) you can find the Anthropic GitHub repo for this paper. There are numerous examples of red-teaming prompts and responses for additional context and for your amusement.
 
@@ -200,3 +197,5 @@ These are natural language instructions that guide both:
 [Here](https://constitutional.ai/) you can learn more about the evolution of AI systems designed to be helpful, harmless, and honest and keep up to date on the latest research since this paper was published.
 
 [Here](https://github.com/sophiaachungg/constitutional-ai/blob/main/pseudocode.pdf) you can find the formal pseudocode for this paper.
+
+[Here](https://github.com/sophiaachungg/constitutional-ai/blob/main/constitutional_ai_demo.ipynb) you can find the code implementation of this training method using small, open-source models.
