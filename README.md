@@ -22,7 +22,8 @@ Reinforcement Learning from Human Feedback (RLHF)
 
 ### RLHF vs Standard Next-Token Prediction
 Standard training (Algorithm 13): Minimize cross-entropy loss on next token prediction
-RLHF training: 
+
+vs. RLHF training: 
 1. Supervised finetuning (same as Algorithm 13)
 2. Train preference model PM(response_A, response_B) → score
 3. Use PM as reward in RL to optimize: E\[PM(response | prompt)]
@@ -111,7 +112,6 @@ The final model should be a highly harmless and non-evasive assistant.
 ### Key Metrics
 - RL-CAI achieves better harmlessness without sacrificing helpfulness
 - Model is non-evasive (explains why it won't help with harmful requests)
-- Elo scores from crowdworker comparisons
 
 ## Discussion
 
